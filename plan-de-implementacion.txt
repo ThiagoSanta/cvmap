@@ -1,0 +1,149 @@
+PLAN DE IMPLEMENTACIÓN — CVMap
+================================
+
+NOTA: Se detectó una pieza faltante en las decisiones previas: para convertir 
+"nombre de ciudad" en coordenadas y poder consultar Overpass, hace falta un 
+paso de geocoding con Nominatim (API de OpenStreetMap). Se incorpora en la 
+Fase 1 y queda pendiente documentar formalmente en decisions.md.
+
+
+FASE 1 — Capa de infraestructura externa
+------------------------------------------
+Objetivo: poder ir de "nombre de ciudad" a "lista cruda de empresas".
+
+- src/config/database.js
+  Conexión a SQLite con better-sqlite3. Ejecuta schema.sql si las tablas 
+  no existen.
+
+- src/config/env.js
+  Carga y valida variables de entorno desde .env.
+
+- src/config/overpass-client.js
+  Construye la query Overpass (bbox). Maneja fallback de servidor 
+  (OVERPASS_API_URL -> OVERPASS_API_URL_FALLBACK).
+
+- src/config/nominatim-client.js (NUEVO)
+  Geocodifica ciudad -> lat/lon. Agregar a .env: 
+  NOMINATIM_API_URL=https://nominatim.openstreetmap.org/search
+
+- Pendiente para decisions.md (agregar cuando se retome):
+  "Geocoding de ciudad vía Nominatim, resultado cacheado. Evaluar tabla 
+  geocache chica (ciudad -> lat/lon) para evitar re-geocodificar la misma 
+  ciudad en cada búsqueda."
+
+
+FASE 2 — Módulo companies (dominio + aplicación + infraestructura)
+------------------------------------------
+- domain/company.entity.js
+  Validación básica de forma del objeto empresa.
+
+- domain/company.repository.js
+  Interfaz: findByOsmId, save, findByBoundingBox, etc.
+
+- infrastructure/sqlite-company.repository.js
+  Implementación real con better-sqlite3.
+
+- application/search-companies.usecase.js
+  Orquesta: geocodificar ciudad -> definir bbox según radio -> chequear 
+  caché (¿hay datos de esa zona con menos de 30 días?) -> si no, consultar 
+  Overpass -> guardar -> devolver.
+
+- application/cache-companies.usecase.js
+  Lógica de guardado/actualización. Incluye regla descubierta en prueba 
+  real: si "name" viene vacío, usar "category" como fallback antes de 
+  persistir o exponer al frontend (a definir en qué capa se resuelve — 
+  sugerido: en el usecase, no en el repository).
+
+- infrastructure/company.controller.js + company.routes.js
+  Expone GET /api/companies?city=...&radius=...
+
+
+FASE 3 — Módulo tracking
+------------------------------------------
+Mismo patrón de capas que companies.
+
+- application/update-status.usecase.js
+  Cambia status en tabla tracking. Crea el registro si no existe para 
+  esa empresa.
+
+- application/add-event.usecase.js
+  Inserta en tracking_events (envío de CV, respuesta, entrevista, nota).
+
+- Rutas:
+  PATCH /api/tracking/:companyId/status
+  POST /api/tracking/:companyId/events
+  GET /api/tracking/:companyId
+
+
+FASE 4 — Servidor Express
+------------------------------------------
+- server.js
+  Arma la app, monta rutas de ambos módulos, sirve public/ como estático.
+
+- src/shared/middlewares/error-handler.js
+  Captura errores de Overpass/Nominatim caídos y devuelve mensaje claro 
+  al frontend (no un 500 pelado).
+
+- src/shared/errors/
+  Clases de error propias (ej: GeocodingError, OverpassError).
+
+
+FASE 5 — Frontend base (estética)
+------------------------------------------
+- public/index.html
+  Estructura mínima: barra de búsqueda arriba, mapa + lista lateral.
+
+- public/css/
+  Aplicar paleta de colores (#6967FB, #C8F904, #0E1A1F, #FFFFFF), 
+  tipografía Manrope, modo semi-oscuro, layout minimalista.
+
+- public/vendor/leaflet/
+  Leaflet self-hosted, mapa base centrado en ubicación del usuario o 
+  última búsqueda.
+
+
+FASE 6 — Frontend: búsqueda y visualización
+------------------------------------------
+- public/js/map.js
+  Input de ciudad + selector de radio -> llama a GET /api/companies -> 
+  pinta marcadores + lista sincronizada.
+
+- Transiciones/animaciones mínimas: fade-in de marcadores, highlight al 
+  hacer hover entre lista y mapa (fluidez sutil, no cargado).
+
+
+FASE 7 — Frontend: seguimiento
+------------------------------------------
+- UI para cambiar estado de cada empresa (dropdown o botones tipo 
+  Kanban simplificado).
+
+- Formulario simple para agregar evento/nota con fecha.
+
+- Filtros: por estado, categoría, con/sin teléfono, con/sin web.
+
+
+FASE 8 — Estadísticas y exportación
+------------------------------------------
+- Endpoint GET /api/stats (conteos por estado).
+
+- Export CSV del listado con estado actual.
+
+
+FASE 9 — Pulido y cierre
+------------------------------------------
+- Revisión general contra known-limitations.md (mensajes claros cuando 
+  Overpass/Nominatim fallan o devuelven poco).
+
+- Actualizar changelog.md fase por fase.
+
+- Testing manual, commit final, deploy si corresponde (plataforma a 
+  definir).
+
+
+ORDEN DE DEPENDENCIAS
+------------------------------------------
+No se puede cachear (Fase 2) sin el cliente de Overpass/Nominatim 
+(Fase 1). No se puede hacer tracking (Fase 3) sin empresas guardadas. 
+El frontend (Fases 5-8) necesita que el backend ya responda.
+
+Próximo paso al retomar: Fase 1.
