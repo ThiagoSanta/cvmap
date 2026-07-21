@@ -1,0 +1,31 @@
+# Límites conocidos — CVMap
+
+Este documento aplica tanto para uso técnico (desarrollo, auditoría del código) como para comunicarle al usuario final qué esperar de la app. Las limitaciones acá descritas son de la fuente de datos (OpenStreetMap / Overpass API), no bugs del sistema.
+
+## Cobertura desigual según la zona
+
+OpenStreetMap depende de contribuciones voluntarias. Ciudades grandes suelen tener buena cobertura de empresas cargadas; ciudades chicas o zonas rurales pueden tener muy pocos registros o ninguno.
+
+**Estado:** todavía no se probó una consulta real de Overpass sobre la zona de referencia del proyecto (Cañada de Gómez / Santa Fe). Es un paso pendiente antes de dar por válida la cobertura esperada para el caso de uso principal.
+
+**De cara al usuario:** un resultado con pocas o ninguna empresa no significa que la app esté fallando — significa que esa zona tiene poca cobertura en OpenStreetMap.
+
+## Datos incompletos
+
+Muchas empresas en OSM tienen solamente el nombre cargado, sin teléfono, dirección, sitio web, horario ni categoría. La app muestra únicamente los campos que existan; los campos vacíos no implican error.
+
+## Información desactualizada
+
+OSM puede tener datos de empresas que ya cerraron, cambiaron de dirección, de teléfono o de nombre. La app refleja lo que exista en la base de OSM al momento de la consulta/caché, no necesariamente el estado real actual del negocio.
+
+## Categorías inconsistentes
+
+Una misma actividad puede estar etiquetada de formas distintas en OSM (ej: una metalúrgica como `industrial`, `factory`, `manufacturer`, `company` o `workshop`), o directamente sin categoría. Por decisión de diseño (ver `decisions.md`), estas categorías no se normalizan en el MVP, por lo que el usuario puede ver rubros similares agrupados bajo etiquetas distintas.
+
+## Límites de la API de Overpass
+
+Overpass es una API pública compartida, con límites de consultas simultáneas y posibilidad de respuestas lentas o caídas temporales. Se mitiga cacheando resultados en SQLite (ver `decisions.md`), pero la primera consulta sobre una zona nueva sigue dependiendo de la disponibilidad de Overpass en ese momento.
+
+## La app no reemplaza la búsqueda laboral tradicional
+
+CVMap ayuda a organizar el envío de CVs a empresas de una zona geográfica, pero no muestra ofertas de empleo activas ni reemplaza portales de trabajo, LinkedIn o la búsqueda directa en sitios de empresas. Encontrar una empresa en el mapa no significa que esté contratando.
