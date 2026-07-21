@@ -6,7 +6,11 @@ Este documento aplica tanto para uso técnico (desarrollo, auditoría del códig
 
 OpenStreetMap depende de contribuciones voluntarias. Ciudades grandes suelen tener buena cobertura de empresas cargadas; ciudades chicas o zonas rurales pueden tener muy pocos registros o ninguno.
 
-**Estado:** todavía no se probó una consulta real de Overpass sobre la zona de referencia del proyecto (Cañada de Gómez / Santa Fe). Es un paso pendiente antes de dar por válida la cobertura esperada para el caso de uso principal.
+**Validado con datos reales (21/07/2026):** una consulta de prueba sobre Cañada de Gómez (bbox ~15km) devolvió 20 resultados entre comercios, talleres y oficinas. La cobertura alcanza para que el proyecto tenga sentido en esta zona, pero confirma los siguientes patrones:
+
+- Algunos registros están completos (nombre, dirección, teléfono, web, horario) — ej: organismos públicos y empresas grandes con presencia de marca.
+- La mayoría están parciales o mínimos (solo nombre + categoría, sin contacto).
+- Existen registros **sin nombre**, identificados únicamente por su categoría (ej: `office=lawyer` sin `name`). La aplicación debe manejar este caso mostrando la categoría como fallback en vez de dejar el campo vacío o mostrar un valor nulo.
 
 **De cara al usuario:** un resultado con pocas o ninguna empresa no significa que la app esté fallando — significa que esa zona tiene poca cobertura en OpenStreetMap.
 
