@@ -30,6 +30,29 @@ Una misma actividad puede estar etiquetada de formas distintas en OSM (ej: una m
 
 Overpass es una API pública compartida, con límites de consultas simultáneas y posibilidad de respuestas lentas o caídas temporales. Se mitiga cacheando resultados en SQLite (ver `decisions.md`), pero la primera consulta sobre una zona nueva sigue dependiendo de la disponibilidad de Overpass en ese momento.
 
+### Timeouts en ciudades grandes y densas
+
+En ciudades grandes y con alta densidad de datos en OSM (ej: Rosario, Córdoba, Buenos Aires), los radios de búsqueda amplios pueden generar consultas demasiado pesadas para que Overpass las resuelva dentro del timeout configurado.
+
+**Hallazgo validado con datos reales (22/07/2026) — Rosario, Argentina:**
+
+| Radio | Resultado | Tiempo |
+|-------|-----------|--------|
+| 1 000 m | Timeout 504 en ambos servidores | — |
+| 5 000 m | 2 014 elementos | ~7.3 s |
+| 10 000 m | 2 638 elementos | ~17.5 s (al límite) |
+| 15 000 m | Timeout 504 en ambos servidores | — |
+
+**Causa:** No es un bug de la aplicación. Es una limitación de la fuente de datos pública: el volumen de elementos OSM en zonas densas supera la capacidad de respuesta de los servidores públicos de Overpass dentro del tiempo límite.
+
+**Mitigaciones implementadas:**
+- El timeout HTTP del cliente es configurable vía `OVERPASS_TIMEOUT_MS` en `.env` (por defecto: 60 s, antes 25 s).
+- El timeout declarado en la query QL se deriva automáticamente del mismo valor.
+- El cliente detecta respuestas parciales con `remark` de tipo "timeout" (HTTP 200 pero datos incompletos) y las trata como error, intentando con servidores de fallback antes de lanzar `OverpassError`.
+
+**Para el usuario final:** si la consulta sobre una ciudad grande agota el tiempo de espera, la app devuelve un error claro. Reducir el radio de búsqueda suele resolver el problema.
+
 ## La app no reemplaza la búsqueda laboral tradicional
 
 CVMap ayuda a organizar el envío de CVs a empresas de una zona geográfica, pero no muestra ofertas de empleo activas ni reemplaza portales de trabajo, LinkedIn o la búsqueda directa en sitios de empresas. Encontrar una empresa en el mapa no significa que esté contratando.
+

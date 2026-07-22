@@ -10,7 +10,8 @@ import { calculateBoundingBox } from '../shared/utils/geo-utils.js';
  * @returns {string} Consulta Overpass QL
  */
 function buildOverpassQuery(bboxString) {
-  return `[out:json][timeout:25];
+  const timeoutSeconds = Math.max(1, Math.floor(envConfig.overpass.timeoutMs / 1000));
+  return `[out:json][timeout:${timeoutSeconds}];
 (
   nwr["office"](${bboxString});
   nwr["shop"](${bboxString});
@@ -85,6 +86,18 @@ async function fetchFromEndpoint(endpointUrl, query) {
       };
     }
 
+    // Overpass puede devolver HTTP 200 con un JSON parcial cuando el servidor
+    // alcanza su límite interno antes del timeout del query QL. En ese caso
+    // incluye un campo "remark" con el texto del error. Tratar como fallo
+    // para que el cliente intente con el servidor de fallback.
+    if (data.remark && /runtime error|timeout/i.test(data.remark)) {
+      return {
+        success: false,
+        status: 200,
+        error: `Overpass devolvió un resultado parcial con advertencia: ${data.remark}`,
+      };
+    }
+
     return {
       success: true,
       data,
@@ -118,7 +131,7 @@ export async function fetchCompaniesFromOverpass(bboxInput) {
   const endpoints = [
     envConfig.overpass.primaryUrl,
     envConfig.overpass.fallbackUrl,
-    'https://overpass.nchc.org.tw/api/interpreter',
+    envConfig.overpass.fallbackUrl2,
   ].filter(Boolean);
 
   const attemptsDetails = [];

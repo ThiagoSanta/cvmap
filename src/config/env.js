@@ -12,6 +12,7 @@ function loadAndValidateEnv() {
     'NOMINATIM_API_URL',
     'OVERPASS_API_URL',
     'OVERPASS_API_URL_FALLBACK',
+    'OVERPASS_API_URL_FALLBACK_2',
   ];
 
   const missingVars = requiredVars.filter((varName) => !process.env[varName] || process.env[varName].trim() === '');
@@ -37,6 +38,14 @@ function loadAndValidateEnv() {
     throw new ConfigurationError('La variable DEFAULT_SEARCH_RADIUS debe ser un número entero positivo.');
   }
 
+  // Timeout del cliente HTTP de Overpass (en milisegundos).
+  // El valor por defecto de 60s da margen a ciudades grandes y densas.
+  // El timeout declarado en la query QL se calcula a partir de este valor.
+  const overpassTimeoutMs = parseInt(process.env.OVERPASS_TIMEOUT_MS || '60000', 10);
+  if (isNaN(overpassTimeoutMs) || overpassTimeoutMs < 5000) {
+    throw new ConfigurationError('La variable OVERPASS_TIMEOUT_MS debe ser un número entero mayor o igual a 5000 (5 segundos).');
+  }
+
   return Object.freeze({
     server: Object.freeze({
       port,
@@ -52,7 +61,8 @@ function loadAndValidateEnv() {
     overpass: Object.freeze({
       primaryUrl: process.env.OVERPASS_API_URL,
       fallbackUrl: process.env.OVERPASS_API_URL_FALLBACK,
-      timeoutMs: 25000,
+      fallbackUrl2: process.env.OVERPASS_API_URL_FALLBACK_2,
+      timeoutMs: overpassTimeoutMs,
     }),
     business: Object.freeze({
       cacheExpirationDays,

@@ -51,3 +51,14 @@ export class OverpassError extends AppError {
     this.attemptsDetails = attemptsDetails;
   }
 }
+
+/**
+ * Error cuando los datos de entrada o parámetros no cumplen con la validación de negocio.
+ */
+export class ValidationError extends AppError {
+  constructor(message) {
+    super(message, 400, 'VALIDATION_ERROR');
+  }
+}
+
+

@@ -87,6 +87,20 @@ FASE 4 — Servidor Express
 - src/shared/errors/
   Clases de error propias (ej: GeocodingError, OverpassError).
 
+NOTA — Timeout de cara al usuario en GET /api/companies (RESOLVER EN FASE 4):
+  Con 3 servidores × 60s de timeout cada uno, el peor caso es ~3 minutos
+  antes de lanzar OverpassError. Esto es inaceptable para un browser (muchos
+  navegadores y proxies HTTP cortan antes de los 3 minutos).
+  Opciones a evaluar al implementar el endpoint:
+  a) Timeout de cliente reducido para el contexto HTTP (p.ej. 20s/servidor)
+     con el timeout largo reservado para scripts de ingesta.
+  b) Respuesta inmediata con datos de caché + polling para resultado fresco
+     (si hay caché disponible, devolver primero y refrescar en background).
+  c) Mensaje de progreso via Server-Sent Events o WebSocket mientras se
+     recorre la cadena de fallbacks.
+  d) Devolver error HTTP 503 rápido con Retry-After si ningún servidor
+     responde en N segundos, dejando que el frontend muestre estado de carga.
+
 
 FASE 5 — Frontend base (estética)
 ------------------------------------------
