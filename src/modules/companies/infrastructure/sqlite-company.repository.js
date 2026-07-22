@@ -35,6 +35,10 @@ export class SqliteCompanyRepository extends CompanyRepository {
     super();
     this.db = databaseInstance;
 
+    this.findByIdStmt = this.db.prepare(
+      'SELECT id, osm_id, name, address, phone, website, opening_hours, category, latitude, longitude, cached_at FROM companies WHERE id = ?'
+    );
+
     this.findByOsmIdStmt = this.db.prepare(
       'SELECT id, osm_id, name, address, phone, website, opening_hours, category, latitude, longitude, cached_at FROM companies WHERE osm_id = ?'
     );
@@ -72,6 +76,17 @@ export class SqliteCompanyRepository extends CompanyRepository {
         AND longitude BETWEEN ? AND ?
         AND datetime(cached_at) >= datetime('now', '-' || ? || ' days')
     `);
+  }
+
+  /**
+   * Busca una empresa por su ID interno.
+   *
+   * @param {number|string} id
+   * @returns {import('../domain/company.entity.js').Company|null}
+   */
+  findById(id) {
+    const row = this.findByIdStmt.get(Number(id));
+    return mapRowToEntity(row);
   }
 
   /**

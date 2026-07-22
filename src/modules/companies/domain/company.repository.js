@@ -4,6 +4,16 @@
  */
 export class CompanyRepository {
   /**
+   * Busca una empresa en el almacenamiento por su PK interna (id).
+   *
+   * @param {number|string} id - Identificador único interno
+   * @returns {Promise<import('./company.entity.js').Company|null>|import('./company.entity.js').Company|null}
+   */
+  findById(id) {
+    throw new Error('El método findById() no ha sido implementado.');
+  }
+
+  /**
    * Busca una empresa en el almacenamiento por su identificador osm_id.
    *
    * @param {string} osmId - Identificador único de OpenStreetMap

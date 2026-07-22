@@ -1,20 +1,20 @@
-import { CompanyNotFoundError, InvalidStatusError, ValidationError } from '../../../shared/errors/errors.js';
-import { VALID_TRACKING_STATUSES } from '../domain/tracking-status.entity.js';
+import { CompanyNotFoundError, ValidationError } from '../../../shared/errors/errors.js';
+import { createTrackingEvent } from '../domain/tracking-event.entity.js';
 
 /**
- * Caso de uso: Actualiza o crea el estado de seguimiento de una empresa.
+ * Caso de uso: Agrega un nuevo evento/hito en el historial de seguimiento de una empresa.
  */
-export class UpdateStatusUseCase {
+export class AddEventUseCase {
   /**
    * @param {import('../domain/tracking.repository.js').TrackingRepository} trackingRepository
    * @param {import('../../companies/domain/company.repository.js').CompanyRepository | import('../../companies/application/get-company-by-id.usecase.js').GetCompanyByIdUseCase} companyRepositoryOrUseCase
    */
   constructor(trackingRepository, companyRepositoryOrUseCase) {
     if (!trackingRepository) {
-      throw new Error('UpdateStatusUseCase requiere una instancia válida de TrackingRepository.');
+      throw new Error('AddEventUseCase requiere una instancia válida de TrackingRepository.');
     }
     if (!companyRepositoryOrUseCase) {
-      throw new Error('UpdateStatusUseCase requiere un repositorio o caso de uso del módulo companies.');
+      throw new Error('AddEventUseCase requiere un repositorio o caso de uso del módulo companies.');
     }
 
     this.trackingRepository = trackingRepository;
@@ -22,7 +22,7 @@ export class UpdateStatusUseCase {
   }
 
   /**
-   * Valida la existencia de la empresa utilizando el contrato del módulo companies.
+   * Valida la existencia de la empresa en la capa de aplicación/dominio de empresas.
    *
    * @private
    * @param {number} companyId
@@ -41,29 +41,32 @@ export class UpdateStatusUseCase {
   }
 
   /**
-   * Ejecuta el cambio de estado de seguimiento para una empresa.
+   * Ejecuta el registro del evento.
    *
    * @param {Object} params
-   * @param {number|string} params.companyId - ID interno de la empresa
-   * @param {string} params.status - Nuevo estado a asignar
-   * @returns {import('../domain/tracking-status.entity.js').TrackingStatus} Estado de seguimiento actualizado
+   * @param {number|string} params.companyId - ID de la empresa
+   * @param {string} params.eventType - Tipo de evento ('cv_enviado', 'respuesta', 'entrevista', 'otro')
+   * @param {string} params.eventDate - Fecha del evento
+   * @param {string|null} [params.note] - Nota u observación opcional
+   * @returns {import('../domain/tracking-event.entity.js').TrackingEvent} Evento de seguimiento registrado
    */
-  execute({ companyId, status }) {
+  execute({ companyId, eventType, eventDate, note }) {
     const numericCompanyId = Number(companyId);
     if (!companyId || isNaN(numericCompanyId) || numericCompanyId <= 0) {
       throw new ValidationError('El ID de empresa provisto es inválido.');
     }
 
-    if (!status || typeof status !== 'string' || !VALID_TRACKING_STATUSES.includes(status.trim())) {
-      throw new InvalidStatusError(status);
-    }
-
-    const cleanStatus = status.trim();
-
     this._ensureCompanyExists(numericCompanyId);
 
-    return this.trackingRepository.upsertStatus(numericCompanyId, cleanStatus);
+    const eventEntity = createTrackingEvent({
+      company_id: numericCompanyId,
+      event_type: eventType,
+      event_date: eventDate,
+      note,
+    });
+
+    return this.trackingRepository.createEvent(eventEntity);
   }
 }
 
-export default UpdateStatusUseCase;
+export default AddEventUseCase;

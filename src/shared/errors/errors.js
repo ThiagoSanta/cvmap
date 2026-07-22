@@ -61,4 +61,26 @@ export class ValidationError extends AppError {
   }
 }
 
+/**
+ * Error cuando se intenta realizar una operación sobre una empresa inexistente.
+ */
+export class CompanyNotFoundError extends AppError {
+  constructor(companyId) {
+    super(`No se encontró la empresa con ID ${companyId}.`, 404, 'COMPANY_NOT_FOUND');
+    this.companyId = companyId;
+  }
+}
+
+/**
+ * Error cuando el estado de tracking provisto no coincide con los estados válidos.
+ */
+export class InvalidStatusError extends ValidationError {
+  constructor(status) {
+    super(`El estado "${status}" no es válido.`);
+    this.code = 'INVALID_STATUS';
+    this.status = status;
+  }
+}
+
+
 
